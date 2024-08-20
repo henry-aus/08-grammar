@@ -74,22 +74,53 @@ fn parse_bool(input: &mut &str) -> PResult<bool> {
     alt(("true", "false")).parse_to().parse_next(input)
 }
 
-// FIXME: num parse doesn't work with scientific notation, fix it
 fn parse_num(input: &mut &str) -> PResult<Num> {
     // process the sign
-    let sign = opt("-").map(|s| s.is_some()).parse_next(input)?;
-    let num = digit1.parse_to::<i64>().parse_next(input)?;
+    let num = parse_int(input)?;
+    let mut frac: Option<i64> = None;
     let ret: Result<(), ErrMode<ContextError>> = ".".value(()).parse_next(input);
     if ret.is_ok() {
-        let frac = digit1.parse_to::<i64>().parse_next(input)?;
-        let v = format!("{}.{}", num, frac).parse::<f64>().unwrap();
-        Ok(if sign {
-            Num::Float(-v as _)
-        } else {
-            Num::Float(v as _)
-        })
+        frac = Some(digit1.parse_to::<i64>().parse_next(input)?);
+    }
+    let scientific = parse_scientific_notion(input)?;
+
+    match (frac, scientific) {
+        (Some(f), Some(s)) => {
+            let v: f64 = format!("{}.{}e{}", num, f, s).parse::<f64>().unwrap();
+            Ok(Num::Float(v))
+        }
+        (Some(f), None) => {
+            let v = format!("{}.{}", num, f).parse::<f64>().unwrap();
+            Ok(Num::Float(v))
+        }
+        (None, Some(s)) => {
+            let v = format!("{}e{}", num, s).parse::<f64>().unwrap();
+            Ok(Num::Float(v))
+        }
+        (None, None) => Ok(Num::Int(num)),
+    }
+}
+
+fn parse_int(input: &mut &str) -> PResult<i64> {
+    let sign = opt(alt(("-", "+")))
+        .map(|s| s.is_some_and(|f| f == "-"))
+        .parse_next(input)?;
+    let num = digit1.parse_to::<i64>().parse_next(input)?;
+    if sign {
+        Ok(-num)
     } else {
-        Ok(if sign { Num::Int(-num) } else { Num::Int(num) })
+        Ok(num)
+    }
+}
+
+fn parse_scientific_notion(input: &mut &str) -> PResult<Option<i64>> {
+    let ret: Result<(), ErrMode<ContextError>> = alt(("e", "E")).value(()).parse_next(input);
+    match ret {
+        Ok(_) => {
+            let integer = parse_int(input)?;
+            Ok(Some(integer))
+        }
+        Err(_) => Ok(None),
     }
 }
 
@@ -172,6 +203,35 @@ mod tests {
         let input = "-123.456";
         let result = parse_num(&mut (&*input))?;
         assert_eq!(result, Num::Float(-123.456));
+
+        let input = "-123.456e-10";
+        let result = parse_num(&mut (&*input))?;
+        assert_eq!(result, Num::Float(-123.456e-10));
+
+        let input = "-123.456E10";
+        let result = parse_num(&mut (&*input))?;
+        assert_eq!(result, Num::Float(-123.456e10));
+
+        let input = "-123.456e+10";
+        let result = parse_num(&mut (&*input))?;
+        assert_eq!(result, Num::Float(-123.456e10));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_scientific_notion() -> PResult<(), ContextError> {
+        let input = "e2";
+        let result = parse_scientific_notion(&mut (&*input))?;
+        assert_eq!(result, Some(2));
+
+        let input = "e-2";
+        let result = parse_scientific_notion(&mut (&*input))?;
+        assert_eq!(result, Some(-2));
+
+        let input = "e+2";
+        let result = parse_scientific_notion(&mut (&*input))?;
+        assert_eq!(result, Some(2));
 
         Ok(())
     }
