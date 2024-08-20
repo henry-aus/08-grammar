@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::{DateTime, Utc};
 use std::{
     net::{IpAddr, Ipv4Addr},
@@ -12,7 +12,7 @@ use winnow::{
 };
 
 #[derive(Debug, PartialEq, Eq)]
-enum HttpMethod {
+pub enum HttpMethod {
     Get,
     Post,
     Put,
@@ -25,7 +25,7 @@ enum HttpMethod {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum HttpProto {
+pub enum HttpProto {
     HTTP1_0,
     HTTP1_1,
     HTTP2_0,
@@ -34,30 +34,30 @@ enum HttpProto {
 
 #[allow(unused)]
 #[derive(Debug)]
-struct NginxLog {
-    addr: IpAddr,
-    datetime: DateTime<Utc>,
-    method: HttpMethod,
-    url: String,
-    protocol: HttpProto,
-    status: u16,
-    body_bytes: u64,
-    referer: String,
-    user_agent: String,
+pub struct NginxLog {
+    pub addr: IpAddr,
+    pub datetime: DateTime<Utc>,
+    pub method: HttpMethod,
+    pub url: String,
+    pub protocol: HttpProto,
+    pub status: u16,
+    pub body_bytes: u64,
+    pub referer: String,
+    pub user_agent: String,
 }
 
 // we need to parse:
 // 93.180.71.3 - - [17/May/2015:08:05:32 +0000] "GET /downloads/product_1 HTTP/1.1" 304 0 "-" "Debian APT-HTTP/1.3 (0.8.16~exp12ubuntu10.21)"
 // with winnow parser combinator
-fn main() -> Result<()> {
-    let s = r#"93.180.71.3 - - [17/May/2015:08:05:32 +0000] "GET /downloads/product_1 HTTP/1.1" 304 0 "-" "Debian APT-HTTP/1.3 (0.8.16~exp12ubuntu10.21)""#;
-    let log = parse_nginx_log(s).map_err(|e| anyhow!("Failed to parse log: {:?}", e))?;
+// fn main() -> Result<()> {
+//     let s = r#"93.180.71.3 - - [17/May/2015:08:05:32 +0000] "GET /downloads/product_1 HTTP/1.1" 304 0 "-" "Debian APT-HTTP/1.3 (0.8.16~exp12ubuntu10.21)""#;
+//     let log = parse_nginx_log(s).map_err(|e| anyhow!("Failed to parse log: {:?}", e))?;
 
-    println!("{:?}", log);
-    Ok(())
-}
+//     println!("{:?}", log);
+//     Ok(())
+// }
 
-fn parse_nginx_log(s: &str) -> PResult<NginxLog> {
+pub fn parse_nginx_log(s: &str) -> PResult<NginxLog> {
     let input = &mut (&*s);
     let ip = parse_ip(input)?;
     parse_ignored(input)?;

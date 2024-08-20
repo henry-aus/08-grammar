@@ -15,8 +15,8 @@ path = "src/json.rs"
 name = "json2"
 path = "src/json2.rs"
 
-
 [dependencies]
+polars = { version = "0.41.3", features = ["parquet"] }
 anyhow = "1.0.86"
 chrono = { version = "0.4.38", features = ["serde"] }
 pest = { version = "2.7.10", features = ["pretty-print"] }
@@ -25,3 +25,4 @@ regex = "1.10.4"
 rhai = { version = "1.18.0", features = ["serde"] }
 serde = { version = "1.0.202", features = ["derive"] }
 winnow = { version = "0.6.8", features = ["simd"] }
+itertools = "0.13.0"
